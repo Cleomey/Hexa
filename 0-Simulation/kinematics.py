@@ -1,4 +1,5 @@
 import math
+import pybullet as p
 from constants import *
 
 # Dimensions used for the simple arm simulation
@@ -37,6 +38,24 @@ def computeDK(theta1, theta2, theta3, l1=constL1, l2=constL2, l3=constL3):
 
     return [x, y, z]
 
+def computeDKDetailed(theta1, theta2, theta3, l1=constL1, l2=constL2, l3=constL3):
+    x0 = 0
+    y0 = 0
+    z0 = 0
+
+    x1 = math.cos(theta1) * l1
+    y1 = math.sin(theta1) * l1
+    z1 = 0
+
+    x2 = ((l1 + l2 * math.cos(theta2)) * math.cos(theta1))
+    y2 = ((l1 + l2 * math.cos(theta2)) * math.sin(theta1))
+    z2 = l2 * math.sin(theta2)
+
+    x3 = ((l1 + l2 * math.cos(theta2) + l3 * math.cos(theta2 + theta3)) * math.cos(theta1)) 
+    y3 = ((l1 + l2 * math.cos(theta2) + l3 * math.cos(theta2 + theta3)) * math.sin(theta1))
+    z3 = (l3 * math.sin(theta2 + theta3) + l2 * math.sin(theta2))
+
+    return [[x0, y0, z0],[ x1, y1, z1],[ x2, y2, z2],[ x3, y3, z3]]
 
 def computeIK(x, y, z, l1=constL1, l2=constL2, l3=constL3):
 
@@ -49,12 +68,12 @@ def computeIK(x, y, z, l1=constL1, l2=constL2, l3=constL3):
     theta3 = alkashi(l2, l3, d) + math.pi
 
     if d > l2 + l3:
-        print ("**** ta mère tu peux pas *****")
+        print ("0 possibilité")
     elif d < l2 + l3:
-        print ("**** choisit t'as 2 possibilitrucs")
+        print ("2 possibilités")
         if x == 0 and y == 0 : 
             theta1 = 0 # fais un saut, essayer d'enlever ce saut avec un bolé1
-            print  ("Hé vazy *** t'as tro de possibi****")
+            print  ("Trop de possibilités")
         
 
     return [theta1, theta2, theta3]
