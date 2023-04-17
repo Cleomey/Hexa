@@ -7,6 +7,7 @@ import argparse
 import pybullet as p
 from onshape_to_robot.simulation import Simulation
 import kinematics
+from constants import *
 
 # from squaternion import Quaternion
 from scipy.spatial.transform import Rotation
@@ -59,8 +60,13 @@ elif args.mode == "inverse":
     controls["target_x"] = p.addUserDebugParameter("target_x", -0.4, 0.4, alphas[0])
     controls["target_y"] = p.addUserDebugParameter("target_y", -0.4, 0.4, alphas[1])
     controls["target_z"] = p.addUserDebugParameter("target_z", -0.4, 0.4, alphas[2])
-
-
+elif args.mode == "triangle_hexa":
+    controls["triangle_x"] = p.addUserDebugParameter("triangle_x", 0.01, 0.8, 0.4)
+    controls["triangle_z"] = p.addUserDebugParameter("triangle_z", -0.2, 0.3, 0)
+    controls["triangle_h"] = p.addUserDebugParameter("triangle_h", 0.01, 0.3, 0.1)
+    controls["triangle_w"] = p.addUserDebugParameter("triangle_w", 0.01, 0.3, 0.2)
+    cross = p.loadURDF("target2/robot.urdf")
+    
 while True:
     targets = {}
     for name in sim.getJoints():
@@ -72,22 +78,12 @@ while True:
         points = kinematics.computeDKDetailed(
             targets["j_c1_rf"],
             targets["j_thigh_rf"],
-            targets["j_tibia_rf"]
+            targets["j_tibia_rf"],
+            use_rads=True,
         )
         i = -1
         T = []
         for pt in points:
-            # Drawing each step of the DK calculation
-            i += 1
-            T.append([pt[0], pt[1], pt[2]])
-            T[-1][0] += leg_center_pos[0]
-            T[-1][1] += leg_center_pos[1]
-            T[-1][2] += leg_center_pos[2]
-            # print("Drawing cross {} at {}".format(i, T))
-            p.resetBasePositionAndOrientation(
-                crosses[i], T[-1], to_pybullet_quternion(0, 0, leg_angle)
-            )
-        '''for pt in points:
             # Drawing each step of the DK calculation
             i += 1
             T.append(kinematics.rotaton_2D(pt[0], pt[1], pt[2], leg_angle))
@@ -96,9 +92,8 @@ while True:
             T[-1][2] += leg_center_pos[2]
             # print("Drawing cross {} at {}".format(i, T))
             p.resetBasePositionAndOrientation(
-                crosses[i], T[-1], (0, 0, leg_angle) #leg_angle c'est l'angle de la croix en fonction du monde qu'on a mis à 0 de base mais faudra changer
-            )'''
-
+                crosses[i], T[-1], to_pybullet_quternion(0, 0, leg_angle)
+            )
         # Temp
         sim.setRobotPose([0, 0, 0.5], to_pybullet_quternion(0, 0, 0))
         # sim.setRobotPose(
@@ -132,6 +127,28 @@ while True:
         p.resetBasePositionAndOrientation(
             cross, T, to_pybullet_quternion(0, 0, leg_angle)
         )
+    elif args.mode == "triangle_hexa":
+        x = p.readUserDebugParameter(controls["triangle_x"])
+        z = p.readUserDebugParameter(controls["triangle_z"])
+        h = p.readUserDebugParameter(controls["triangle_h"])
+        w = p.readUserDebugParameter(controls["triangle_w"])
+
+        alphas = kinematics.triangle(x, z, h, w, sim.t)
+        targets["j_c1_rf"] = alphas[0]
+        targets["j_thigh_rf"] = alphas[1]
+        targets["j_tibia_rf"] = alphas[2]
+        state = sim.setJoints(targets)
+        pos = kinematics.computeDK(alphas[0], alphas[1], alphas[2])
+        pos = kinematics.rotaton_2D(pos[0], pos[1], pos[2], -math.pi/4)
+        pos[0] +=  LEG_CENTER_POS[0][0]
+        pos[1] +=  LEG_CENTER_POS[0][1]
+        pos[2] += 0.5 + LEG_CENTER_POS[0][2]
+        sim.addDebugPosition(pos, duration=3)
+        sim.setRobotPose([0, 0, 0.5], to_pybullet_quternion(0, 0, 0))
+        
+
+        
+
 
     sim.tick()
 
